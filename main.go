@@ -13,7 +13,7 @@ import (
 )
 
 func main() {
-	m := mma.MMA{
+	m := mma.DB{
 		IP:       net.IPv4(10, 10, 10, 106),
 		User:     "root",
 		Password: "wisdom",
@@ -23,7 +23,7 @@ func main() {
 		panic(err)
 	}
 
-	var devices []mma.Devices
+	var devices []mma.DevicesInfo
 	var err error
 	if devices, err = m.GetDevices(); err != nil {
 		panic(err)

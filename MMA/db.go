@@ -20,8 +20,8 @@ var MMASqlName = "mmasystem"
 // MMAGlobaldevicestatus -> globaldevicestatus
 var MMAGlobaldevicestatus = "globaldevicestatus"
 
-// MMA is the struct for MMA connection
-type MMA struct {
+// DB is the struct for DB connection
+type DB struct {
 	// MMA MySql IP (local)
 	IP net.IP
 
@@ -45,10 +45,10 @@ type DevicesInfo struct {
 }
 
 // Open a MMA database
-func (m *MMA) Open() error {
+func (d *DB) Open() error {
 	var err error
-	url := fmt.Sprintf("%s:%s@tcp(%s)/%s", m.User, m.Password, m.IP.String(), MMASqlName)
-	m.db, err = sql.Open("mysql", url)
+	url := fmt.Sprintf("%s:%s@tcp(%s)/%s", d.User, d.Password, d.IP.String(), MMASqlName)
+	d.db, err = sql.Open("mysql", url)
 	if err != nil {
 		return err
 	}
@@ -57,14 +57,14 @@ func (m *MMA) Open() error {
 }
 
 // Close a MMA database
-func (m *MMA) close() {
-	m.close()
+func (d *DB) close() {
+	d.close()
 }
 
 // GetDevices select from local database, and return devices
-func (m *MMA) GetDevices() ([]DevicesInfo, error) {
+func (d *DB) GetDevices() ([]DevicesInfo, error) {
 	// Execute the query
-	rows, err := m.db.Query("SELECT id,ip FROM " + MMAGlobaldevicestatus)
+	rows, err := d.db.Query("SELECT id,ip FROM " + MMAGlobaldevicestatus)
 	if err != nil {
 		return nil, err
 	}
