@@ -20,35 +20,26 @@ var MMASqlName = "mmasystem"
 // MMAGlobaldevicestatus -> globaldevicestatus
 var MMAGlobaldevicestatus = "globaldevicestatus"
 
-// DB is the struct for DB connection
-type DB struct {
-	// MMA MySql IP (local)
-	IP net.IP
+// db is the struct for db connection
+type db struct {
+	// MMA MySql ip (local)
+	ip net.IP
 
-	// MMA DB User
-	User string
+	// MMA DB user
+	user string
 
 	// MMA DB pwd
-	Password string
+	password string
 
-	// MMA MySql db
-	db *sql.DB
+	// MMA MySql sql
+	sql *sql.DB
 }
 
-// DevicesInfo is the device info
-type DevicesInfo struct {
-	// mmasystem.globaldevicestatus.id
-	ID string
-
-	// mmasystem.globaldevicestatus.ip
-	IP net.IP
-}
-
-// Open a MMA database
-func (d *DB) Open() error {
+// open a MMA database
+func (d *db) open() error {
 	var err error
-	url := fmt.Sprintf("%s:%s@tcp(%s)/%s", d.User, d.Password, d.IP.String(), MMASqlName)
-	d.db, err = sql.Open("mysql", url)
+	url := fmt.Sprintf("%s:%s@tcp(%s)/%s", d.user, d.password, d.ip.String(), MMASqlName)
+	d.sql, err = sql.Open("mysql", url)
 	if err != nil {
 		return err
 	}
@@ -56,30 +47,30 @@ func (d *DB) Open() error {
 	return nil
 }
 
-// Close a MMA database
-func (d *DB) close() {
-	d.close()
+// close a MMA database
+func (d *db) close() {
+	d.sql.Close()
 }
 
-// GetDevices select from local database, and return devices
-func (d *DB) GetDevices() ([]DevicesInfo, error) {
+// getDevices select from local database, and return devices
+func (d *db) getDevices() ([]device, error) {
 	// Execute the query
-	rows, err := d.db.Query("SELECT id,ip FROM " + MMAGlobaldevicestatus)
+	rows, err := d.sql.Query("SELECT id,ip,devaudiorecvport FROM " + MMAGlobaldevicestatus)
 	if err != nil {
 		return nil, err
 	}
 
-	var devices []DevicesInfo
+	var devices []device
 	for rows.Next() {
-		dev := DevicesInfo{}
-		var IP string
+		dev := device{}
 
-		if err := rows.Scan(&dev.ID, &IP); err != nil {
+		if err := rows.Scan(&dev.id, &dev.ip, &dev.recvPort); err != nil {
 			return nil, err
 		}
 
-		dev.IP = net.ParseIP(IP)
 		devices = append(devices, dev)
+
+		fmt.Printf("global devices: %s, %s, %s\n", dev.id, dev.ip, dev.recvPort)
 	}
 
 	return devices, nil
