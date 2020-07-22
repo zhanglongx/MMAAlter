@@ -17,8 +17,8 @@ import (
 // MMASqlName is the default MMA DB Name
 var MMASqlName = "mmasystem"
 
-// MMAGlobaldevicestatus -> globaldevicestatus
-var MMAGlobaldevicestatus = "globaldevicestatus"
+// MMAGlobaldevicestatus -> devices_res
+var MMAGlobaldevicestatus = "devices_res"
 
 // db is the struct for db connection
 type db struct {
@@ -55,7 +55,7 @@ func (d *db) close() {
 // getDevices select from local database, and return devices
 func (d *db) getDevices() ([]device, error) {
 	// Execute the query
-	rows, err := d.sql.Query("SELECT id,ip,devaudiorecvport FROM " + MMAGlobaldevicestatus)
+	rows, err := d.sql.Query("SELECT id,DevIP,MCPort FROM " + MMAGlobaldevicestatus)
 	if err != nil {
 		return nil, err
 	}
@@ -70,7 +70,7 @@ func (d *db) getDevices() ([]device, error) {
 
 		devices = append(devices, dev)
 
-		fmt.Printf("global devices: %s, %s, %s\n", dev.id, dev.ip, dev.recvPort)
+		fmt.Printf("global devices: %s, %s, %d\n", dev.id, dev.ip, dev.recvPort)
 	}
 
 	return devices, nil
