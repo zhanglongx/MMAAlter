@@ -8,6 +8,7 @@ package main
 import (
 	"fmt"
 	"net"
+	"time"
 
 	mma "github.com/zhanglongx/MMAAlter/MMA"
 )
@@ -33,10 +34,14 @@ func main() {
 		return
 	}
 
-	IP1 := net.IPv4(11, 11, 11, 104)
-	IP2 := net.IPv4(11, 11, 11, 109)
-	if err := m.LinkDevices(IP1, IP2); err != nil {
-		panic(err)
+	for true {
+		// IP1 := net.IPv4(11, 11, 11, 104)
+		// IP2 := net.IPv4(11, 11, 11, 109)
+		// if err := m.LinkDevices(IP1, IP2); err != nil {
+		// 	fmt.Printf("%q\n", err)
+		// }
+
+		time.Sleep(time.Duration(10) * time.Second)
 	}
 
 	m.Close()
