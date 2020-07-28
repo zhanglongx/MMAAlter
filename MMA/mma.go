@@ -32,13 +32,6 @@ var (
 
 // Open a MMA
 func (m *MMA) Open() error {
-	// Erl
-	// go epmd()
-	// go erlDP()
-
-	cmd := cmd{}
-
-	cmd.Open()
 
 	db := &db{
 		ip:       m.DbIP,
@@ -52,6 +45,12 @@ func (m *MMA) Open() error {
 
 	m.db = db
 
+	cmd := cmd{
+		db: db,
+	}
+
+	go cmd.Listen()
+
 	fmt.Printf("Create mma successfully\n")
 
 	return nil
@@ -59,7 +58,7 @@ func (m *MMA) Open() error {
 
 // GetDevices return DevicesInfo
 func (m *MMA) GetDevices() ([]DevicesInfo, error) {
-	devices, err := m.db.getDevices()
+	devices, err := m.db.getAllDevices()
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +77,7 @@ func (m *MMA) GetDevices() ([]DevicesInfo, error) {
 
 // LinkDevices Link IP1 -> IP2
 func (m *MMA) LinkDevices(IP1 net.IP, IP2 net.IP) error {
-	devices, err := m.db.getDevices()
+	devices, err := m.db.getAllDevices()
 	if err != nil {
 		return err
 	}
@@ -113,73 +112,4 @@ func (m *MMA) Close() {
 	m.db.close()
 
 	fmt.Printf("Close mma successfully\n")
-}
-
-func epmd() {
-	ln, err := net.Listen("tcp", ":4369")
-	if err != nil {
-		panic(err)
-	}
-
-	defer ln.Close()
-
-	for {
-		conn, err := ln.Accept()
-		if err != nil {
-			panic(err)
-		}
-
-		go func() {
-			for true {
-				buffer := make([]byte, 1024)
-				if _, err := conn.Read(buffer); err != nil {
-					return
-				}
-
-				epmdAck := []byte{0x77, 0x00, 0x11, 0x12, 0x4d, 0x00, 0x00, 0x05, 0x00,
-					0x05, 0x00, 0x0c, 0x31, 0x31, 0x5f, 0x31, 0x31, 0x5f, 0x31, 0x31, 0x5f, 0x31, 0x30, 0x39, 0x00}
-
-				// EPMD_PORT2_REQ
-				if buffer[2] == 0x7A {
-					if _, err := conn.Write(epmdAck); err != nil {
-						return
-					}
-				}
-			}
-		}()
-	}
-}
-
-func erlDP() {
-	ln, err := net.Listen("tcp", ":4370")
-	if err != nil {
-		panic(err)
-	}
-
-	defer ln.Close()
-
-	for {
-		conn, err := ln.Accept()
-		if err != nil {
-			panic(err)
-		}
-
-		go func() {
-			for true {
-				buffer := make([]byte, 1024)
-				if _, err := conn.Read(buffer); err != nil {
-					return
-				}
-
-				erlDPAck := []byte{0x00, 0x03, 0x73, 0x6f, 0x6b}
-
-				// Version: R6
-				if buffer[3] == 0x00 && buffer[4] == 0x05 {
-					if _, err := conn.Write(erlDPAck); err != nil {
-						return
-					}
-				}
-			}
-		}()
-	}
 }

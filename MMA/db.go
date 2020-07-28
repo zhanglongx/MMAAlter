@@ -9,16 +9,14 @@ import (
 	"database/sql"
 	"fmt"
 	"net"
-
-	// MySql driver
-	_ "github.com/go-sql-driver/mysql"
+	"sync"
 )
 
 // MMASqlName is the default MMA DB Name
 var MMASqlName = "mmasystem"
 
-// MMAGlobaldevicestatus -> devices_res
-var MMAGlobaldevicestatus = "devices_res"
+// MMAGlobaldevicestatus -> globaldevicestatus
+var MMAGlobaldevicestatus = "globaldevicestatus"
 
 // db is the struct for db connection
 type db struct {
@@ -33,6 +31,11 @@ type db struct {
 
 	// MMA MySql sql
 	sql *sql.DB
+
+	// stmt
+	stmt *sql.Stmt
+
+	lock sync.RWMutex
 }
 
 // open a MMA database
@@ -44,18 +47,29 @@ func (d *db) open() error {
 		return err
 	}
 
+	d.stmt, err = d.sql.Prepare("?")
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
 // close a MMA database
 func (d *db) close() {
+	d.stmt.Close()
+
 	d.sql.Close()
 }
 
-// getDevices select from local database, and return devices
-func (d *db) getDevices() ([]device, error) {
+// getAllDevices select from local database, and return devices
+func (d *db) getAllDevices() ([]device, error) {
+	d.lock.Lock()
+
+	defer d.lock.Unlock()
+
 	// Execute the query
-	rows, err := d.sql.Query("SELECT id,DevIP,MCPort FROM " + MMAGlobaldevicestatus)
+	rows, err := d.sql.Query("SELECT id,ip,devmcport FROM " + MMAGlobaldevicestatus)
 	if err != nil {
 		return nil, err
 	}
@@ -70,8 +84,22 @@ func (d *db) getDevices() ([]device, error) {
 
 		devices = append(devices, dev)
 
-		fmt.Printf("global devices: %s, %s, %d\n", dev.id, dev.ip, dev.recvPort)
+		// fmt.Printf("global devices: %s, %s, %d\n", dev.id, dev.ip, dev.recvPort)
 	}
 
 	return devices, nil
+}
+
+// updateDB update local databaSe
+func (d *db) updateDB(sql string) error {
+	d.lock.Lock()
+
+	defer d.lock.Unlock()
+
+	// Execute
+	if _, err := d.sql.Exec(sql); err != nil {
+		return err
+	}
+
+	return nil
 }

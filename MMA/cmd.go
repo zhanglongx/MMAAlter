@@ -7,23 +7,25 @@ package mma
 
 import (
 	"errors"
+	"fmt"
 	"net"
 	"regexp"
+	"strings"
 )
 
+// CMDPORT is WS cmd port
+const CMDPORT = ":7001"
+
 type cmd struct {
+	db *db
 }
 
 func (c *cmd) Open() {
-	go listen()
+	// TODO
 }
 
-func (c *cmd) Close() {
-	// TODO:
-}
-
-func listen() {
-	ln, err := net.Listen("tcp", ":7001")
+func (c *cmd) Listen() {
+	ln, err := net.Listen("tcp", CMDPORT)
 	if err != nil {
 		panic(err)
 	}
@@ -43,12 +45,29 @@ func listen() {
 					return
 				}
 
-				re := regexp.MustCompile(`_MMACMD_#_CMD_:=(.*)`)
-				if matched := re.FindSubmatch(buffer); matched != nil {
-					if ack, err := cmdRoutine(matched[1]); err == nil {
-						if _, err := conn.Write(ack); err != nil {
-							return
+				for _, b := range strings.Split(string(buffer), "\n") {
+					if strings.Contains(b, "_MMAREQ_") {
+						// TODO
+					} else if strings.Contains(b, "_MMASYNC_") {
+
+						re := regexp.MustCompile(`_SQL_:=(.*)`)
+						if matched := re.FindSubmatch([]byte(b)); matched != nil {
+							if err := c.db.updateDB(string(matched[1])); err != nil {
+								fmt.Printf("%q\n", err)
+							}
 						}
+
+					} else if strings.Contains(b, "_MMACMD_") {
+
+						re := regexp.MustCompile(`_MMACMD_#_CMD_:=(.*)`)
+						if matched := re.FindSubmatch([]byte(b)); matched != nil {
+							if ack, err := cmdRoutine(matched[1]); err == nil {
+								if _, err := conn.Write(ack); err != nil {
+									panic(err)
+								}
+							}
+						}
+
 					}
 				}
 			}
@@ -56,15 +75,31 @@ func listen() {
 	}
 }
 
+func (c *cmd) Close() {
+	// TODO
+}
+
 func cmdRoutine(cmd []byte) ([]byte, error) {
+	join := func(s string) []byte {
+		return []byte("_MMAINFO_#_" + s + "_:=d41d8cd98f00b204e9800998ecf8427e\r")
+	}
+
 	cmdStr := string(cmd)
 	switch cmdStr {
 	case "GETDEVICESTACHECKSUM":
-		return []byte("_MMAINFO_#_" + cmdStr + "_:=d41d8cd98f00b204e9800998ecf8427e"), nil
+		return join("DEVSTATUSCHECKSUM"), nil
 	case "GETUSERSTACHECKSUM":
-		return []byte("_MMAINFO_#_" + cmdStr + "_:=d41d8cd98f00b204e9800998ecf8427e"), nil
+		return join("USERSTATUSCHECKSUM"), nil
 	case "GETUNITCHECKSUM":
-		return []byte("_MMAINFO_#_" + cmdStr + "_:=d41d8cd98f00b204e9800998ecf8427e"), nil
+		return join("UNITCHECKSUM"), nil
+	case "GETDEVGRANTCHECKSUM":
+		return join("DEVGRANTCHECKSUM"), nil
+	case "GETDEVLINKCHECKSUM":
+		return join("DEVLINKSTACHECKSUM"), nil
+	case "GETVIRTUALDEVCHECKSUM":
+		return join("VIRTUALDEVCHECKSUM"), nil
+	case "CHECKACTIVE":
+		return []byte("_MMAINFO_#_" + "ACTIVED"), nil
 	}
 
 	return nil, errors.New("Not support cmd")

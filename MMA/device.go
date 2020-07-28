@@ -34,7 +34,16 @@ func (d *device) link(center net.IP, unit string, to *device) error {
 	var cmd []byte
 	result := make([]byte, 1024)
 
-	cmd = []byte("DEVCOMMAND:SETLINKSTA")
+	cmd = []byte("_MMACMD_#_CMD_:=CHECKACTIVE\r")
+	if _, err := conn.Write(cmd); err != nil {
+		return err
+	}
+
+	if _, err := conn.Read(result); err != nil {
+		return err
+	}
+
+	cmd = []byte("DEVCOMMAND:SETLINKSTA\r")
 	if _, err := conn.Write(cmd); err != nil {
 		return err
 	}
@@ -44,8 +53,8 @@ func (d *device) link(center net.IP, unit string, to *device) error {
 	}
 
 	// tempz
-	cmd = []byte(fmt.Sprintf("_DEVID_:=%s_DEVIP_:=%s_DEVWORKPORT_:=%d_DEVWORKTYPE_:=%d_SETBYUNITID_=%s",
-		to.id, to.ip, to.recvPort, 10, unit))
+	cmd = []byte(fmt.Sprintf("_DEVID_:=%s_DEVWORKIP_:=%s_DEVWORKPORT_:=%d_DEVWORKTYPE_:=%d_SETBYUNITID_:=%s\r",
+		d.id, to.ip, d.recvPort, 10, unit))
 	if _, err := conn.Write(cmd); err != nil {
 		return err
 	}
@@ -57,7 +66,7 @@ func (d *device) link(center net.IP, unit string, to *device) error {
 	// tempz
 	time.Sleep(time.Duration(10) * time.Second)
 
-	cmd = []byte("DEVCOMMAND:SETLINKSTA")
+	cmd = []byte("DEVCOMMAND:SETLINKSTA\r")
 	if _, err := conn.Write(cmd); err != nil {
 		return err
 	}
@@ -67,8 +76,8 @@ func (d *device) link(center net.IP, unit string, to *device) error {
 	}
 
 	// tempz
-	cmd = []byte(fmt.Sprintf("_DEVID_:=%s_DEVIP_:=%s_DEVWORKPORT_:=%d_DEVWORKTYPE_:=%d_SETBYUNITID_=%s",
-		d.id, d.ip, to.recvPort, 1, unit))
+	cmd = []byte(fmt.Sprintf("_DEVID_:=%s_DEVWORKIP_:=%s_DEVWORKPORT_:=%d_DEVWORKTYPE_:=%d_SETBYUNITID_:=%s\r",
+		to.id, d.ip, d.recvPort, 1, unit))
 	if _, err := conn.Write(cmd); err != nil {
 		return err
 	}
