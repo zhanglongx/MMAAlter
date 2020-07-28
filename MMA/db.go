@@ -9,7 +9,10 @@ import (
 	"database/sql"
 	"fmt"
 	"net"
-	"sync"
+	"regexp"
+
+	// MySql driver
+	_ "github.com/go-sql-driver/mysql"
 )
 
 // MMASqlName is the default MMA DB Name
@@ -31,11 +34,6 @@ type db struct {
 
 	// MMA MySql sql
 	sql *sql.DB
-
-	// stmt
-	stmt *sql.Stmt
-
-	lock sync.RWMutex
 }
 
 // open a MMA database
@@ -47,29 +45,18 @@ func (d *db) open() error {
 		return err
 	}
 
-	d.stmt, err = d.sql.Prepare("?")
-	if err != nil {
-		return err
-	}
-
 	return nil
 }
 
 // close a MMA database
 func (d *db) close() {
-	d.stmt.Close()
-
 	d.sql.Close()
 }
 
 // getAllDevices select from local database, and return devices
 func (d *db) getAllDevices() ([]device, error) {
-	d.lock.Lock()
-
-	defer d.lock.Unlock()
-
 	// Execute the query
-	rows, err := d.sql.Query("SELECT id,ip,devmcport FROM " + MMAGlobaldevicestatus)
+	rows, err := d.sql.Query("SELECT id,ip,devmcport,devworksta FROM " + MMAGlobaldevicestatus)
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +65,7 @@ func (d *db) getAllDevices() ([]device, error) {
 	for rows.Next() {
 		dev := device{}
 
-		if err := rows.Scan(&dev.id, &dev.ip, &dev.recvPort); err != nil {
+		if err := rows.Scan(&dev.id, &dev.ip, &dev.recvPort, &dev.devworksta); err != nil {
 			return nil, err
 		}
 
@@ -91,14 +78,34 @@ func (d *db) getAllDevices() ([]device, error) {
 }
 
 // updateDB update local databaSe
-func (d *db) updateDB(sql string) error {
-	d.lock.Lock()
+func (d *db) updateDB(table string, key string, sql string) error {
+	if table != "globaldevicestatus" {
+		// tempz
+		return nil
+	}
 
-	defer d.lock.Unlock()
-
-	// Execute
-	if _, err := d.sql.Exec(sql); err != nil {
+	query := fmt.Sprintf("SELECT * from %s WHERE id = '%s'", table, key)
+	rows, err := d.sql.Query(query)
+	if err != nil {
 		return err
+	}
+
+	if !rows.Next() {
+		query := fmt.Sprintf("INSERT INTO %s(id) VALUES('%s')", table, key)
+		if _, execErr := d.sql.Exec(query); execErr != nil {
+			return execErr
+		}
+	}
+
+	// fmt.Printf(sql + "\n")
+
+	re := regexp.MustCompile("and serverip=.*$")
+	sql = re.ReplaceAllString(sql, "")
+
+	// FIXME: transaction
+	_, execErr := d.sql.Exec(sql + ";")
+	if execErr != nil {
+		return execErr
 	}
 
 	return nil

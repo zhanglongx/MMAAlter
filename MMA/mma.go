@@ -84,11 +84,11 @@ func (m *MMA) LinkDevices(IP1 net.IP, IP2 net.IP) error {
 
 	var dev1, dev2 device
 	for _, dev := range devices {
-		if IP1.Equal(net.ParseIP(dev.ip)) {
+		if IP1.Equal(net.ParseIP(dev.ip)) && dev.devworksta != -1 {
 			dev1 = dev
 		}
 
-		if IP2.Equal(net.ParseIP(dev.ip)) {
+		if IP2.Equal(net.ParseIP(dev.ip)) && dev.devworksta != -1 {
 			dev2 = dev
 		}
 	}

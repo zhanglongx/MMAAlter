@@ -50,9 +50,9 @@ func (c *cmd) Listen() {
 						// TODO
 					} else if strings.Contains(b, "_MMASYNC_") {
 
-						re := regexp.MustCompile(`_SQL_:=(.*)`)
+						re := regexp.MustCompile(`_TABLENAME_:=(.*)_PRIMARYKEYVALUE_:=(.*)_SQL_:=(.*)`)
 						if matched := re.FindSubmatch([]byte(b)); matched != nil {
-							if err := c.db.updateDB(string(matched[1])); err != nil {
+							if err := c.db.updateDB(string(matched[1]), string(matched[2]), string(matched[3])); err != nil {
 								fmt.Printf("%q\n", err)
 							}
 						}

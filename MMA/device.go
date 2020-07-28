@@ -20,6 +20,9 @@ type device struct {
 
 	// globaldevicestatus.devaudiorecvport
 	recvPort int
+
+	// globaldevicestatus.devworksta
+	devworksta int
 }
 
 // link device -> to
@@ -52,7 +55,6 @@ func (d *device) link(center net.IP, unit string, to *device) error {
 		return err
 	}
 
-	// tempz
 	cmd = []byte(fmt.Sprintf("_DEVID_:=%s_DEVWORKIP_:=%s_DEVWORKPORT_:=%d_DEVWORKTYPE_:=%d_SETBYUNITID_:=%s\r",
 		d.id, to.ip, d.recvPort, 10, unit))
 	if _, err := conn.Write(cmd); err != nil {
@@ -75,7 +77,6 @@ func (d *device) link(center net.IP, unit string, to *device) error {
 		return err
 	}
 
-	// tempz
 	cmd = []byte(fmt.Sprintf("_DEVID_:=%s_DEVWORKIP_:=%s_DEVWORKPORT_:=%d_DEVWORKTYPE_:=%d_SETBYUNITID_:=%s\r",
 		to.id, d.ip, d.recvPort, 1, unit))
 	if _, err := conn.Write(cmd); err != nil {
