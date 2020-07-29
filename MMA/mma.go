@@ -18,6 +18,9 @@ type MMA struct {
 
 	// mma.db
 	db *db
+
+	// mma.SetLinkSta
+	l link
 }
 
 // DevicesInfo is the device info
@@ -45,11 +48,16 @@ func (m *MMA) Open() error {
 
 	m.db = db
 
-	cmd := cmd{
+	wsSvr := svr{
 		db: db,
 	}
 
-	go cmd.Listen()
+	go wsSvr.Listen()
+
+	m.l = link{
+		center: net.IPv4(11, 11, 11, 105),
+		unit:   "ab65950e_cb21_40e6_9517_2bbd32281ebc",
+	}
 
 	fmt.Printf("Create mma successfully\n")
 
@@ -84,11 +92,11 @@ func (m *MMA) LinkDevices(IP1 net.IP, IP2 net.IP) error {
 
 	var dev1, dev2 device
 	for _, dev := range devices {
-		if IP1.Equal(net.ParseIP(dev.ip)) && dev.devworksta != -1 {
+		if IP1.Equal(net.ParseIP(dev.ip)) && dev.devworksta == DEVEMPTY {
 			dev1 = dev
 		}
 
-		if IP2.Equal(net.ParseIP(dev.ip)) && dev.devworksta != -1 {
+		if IP2.Equal(net.ParseIP(dev.ip)) && dev.devworksta == DEVEMPTY {
 			dev2 = dev
 		}
 	}
@@ -97,18 +105,58 @@ func (m *MMA) LinkDevices(IP1 net.IP, IP2 net.IP) error {
 		return errIPNotFound
 	}
 
-	// tempz
-	center := net.IPv4(11, 11, 11, 105)
-	unit := "ab65950e_cb21_40e6_9517_2bbd32281ebc"
-	if err := dev1.link(center, unit, &dev2); err != nil {
+	if err := m.l.encStart(&dev1, &dev2); err != nil {
 		return err
 	}
+
+	if err := m.l.decStart(&dev2, &dev1); err != nil {
+		return err
+	}
+
+	// TODO: check devWorkSta
+
+	return nil
+}
+
+// DisLinkDevices DisLink IP1 -> IP2
+func (m *MMA) DisLinkDevices(IP1 net.IP, IP2 net.IP) error {
+	devices, err := m.db.getAllDevices()
+	if err != nil {
+		return err
+	}
+
+	var dev1, dev2 device
+	for _, dev := range devices {
+		if IP1.Equal(net.ParseIP(dev.ip)) && dev.devworksta == DEVENC {
+			dev1 = dev
+		}
+
+		if IP2.Equal(net.ParseIP(dev.ip)) && dev.devworksta == DEVDEC {
+			dev2 = dev
+		}
+	}
+
+	if dev1.id == "" || dev2.id == "" {
+		return errIPNotFound
+	}
+
+	if err := m.l.encStop(&dev1); err != nil {
+		return err
+	}
+
+	if err := m.l.decStop(&dev2); err != nil {
+		return err
+	}
+
+	// TODO: check devWorkSta
 
 	return nil
 }
 
 // Close a MMA
 func (m *MMA) Close() {
+	m.l.close()
+
 	m.db.close()
 
 	fmt.Printf("Close mma successfully\n")

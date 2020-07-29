@@ -80,7 +80,6 @@ func (d *db) getAllDevices() ([]device, error) {
 // updateDB update local databaSe
 func (d *db) updateDB(table string, key string, sql string) error {
 	if table != "globaldevicestatus" {
-		// tempz
 		return nil
 	}
 
@@ -102,7 +101,7 @@ func (d *db) updateDB(table string, key string, sql string) error {
 	re := regexp.MustCompile("and serverip=.*$")
 	sql = re.ReplaceAllString(sql, "")
 
-	// FIXME: transaction
+	// FIXME: transaction?
 	_, execErr := d.sql.Exec(sql + ";")
 	if execErr != nil {
 		return execErr

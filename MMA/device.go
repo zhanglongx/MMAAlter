@@ -6,9 +6,18 @@
 package mma
 
 import (
+	"errors"
 	"fmt"
 	"net"
-	"time"
+	"sync"
+)
+
+// DEVENC -> globaldevicestatus.devworksta
+const (
+	DEVLOST  = -1
+	DEVEMPTY = 0
+	DEVDEC   = 1
+	DEVENC   = 10
 )
 
 type device struct {
@@ -25,9 +34,68 @@ type device struct {
 	devworksta int
 }
 
-// link device -> to
-func (d *device) link(center net.IP, unit string, to *device) error {
-	conn, err := net.Dial("tcp", center.String()+":7001")
+type link struct {
+	// centerIP
+	center net.IP
+
+	lock sync.RWMutex
+
+	unit string
+}
+
+var (
+	errDevStaError = errors.New("Dev Sta Error")
+)
+
+func (l *link) open() error {
+	return nil
+}
+
+func (l *link) close() {
+}
+
+func (l *link) encStart(d *device, to *device) error {
+	// TODO: device type
+	if d.devworksta != DEVEMPTY {
+		return errDevStaError
+	}
+
+	return l.setLinkSta(d.id, to.ip, to.recvPort, 10)
+}
+
+func (l *link) encStop(d *device) error {
+	if d.devworksta != DEVENC {
+		return errDevStaError
+	}
+
+	return l.setLinkSta(d.id, "0", 0, 10)
+}
+
+func (l *link) decStart(d *device, from *device) error {
+	// TODO: device type
+	if d.devworksta != DEVEMPTY {
+		return errDevStaError
+	}
+
+	return l.setLinkSta(d.id, from.ip, from.recvPort, 1)
+
+}
+
+func (l *link) decStop(d *device) error {
+	if d.devworksta != DEVDEC {
+		return errDevStaError
+	}
+
+	return l.setLinkSta(d.id, "0", 0, 1)
+}
+
+func (l *link) setLinkSta(id string, ip string, recvPort int, t int) error {
+
+	l.lock.Lock()
+
+	defer l.lock.Unlock()
+
+	conn, err := net.Dial("tcp", l.center.String()+":7001")
 	if err != nil {
 		return err
 	}
@@ -56,7 +124,8 @@ func (d *device) link(center net.IP, unit string, to *device) error {
 	}
 
 	cmd = []byte(fmt.Sprintf("_DEVID_:=%s_DEVWORKIP_:=%s_DEVWORKPORT_:=%d_DEVWORKTYPE_:=%d_SETBYUNITID_:=%s\r",
-		d.id, to.ip, d.recvPort, 10, unit))
+		id, ip, recvPort, t, l.unit))
+
 	if _, err := conn.Write(cmd); err != nil {
 		return err
 	}
@@ -64,40 +133,6 @@ func (d *device) link(center net.IP, unit string, to *device) error {
 	if _, err := conn.Read(result); err != nil {
 		return err
 	}
-
-	// tempz
-	time.Sleep(time.Duration(10) * time.Second)
-
-	cmd = []byte("DEVCOMMAND:SETLINKSTA\r")
-	if _, err := conn.Write(cmd); err != nil {
-		return err
-	}
-
-	if _, err := conn.Read(result); err != nil {
-		return err
-	}
-
-	cmd = []byte(fmt.Sprintf("_DEVID_:=%s_DEVWORKIP_:=%s_DEVWORKPORT_:=%d_DEVWORKTYPE_:=%d_SETBYUNITID_:=%s\r",
-		to.id, d.ip, d.recvPort, 1, unit))
-	if _, err := conn.Write(cmd); err != nil {
-		return err
-	}
-
-	if _, err := conn.Read(result); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// dislink device -> to
-func (d *device) dislink(center net.IP, unit string, to *device) error {
-	conn, err := net.Dial("tcp", center.String()+":7001")
-	if err != nil {
-		return err
-	}
-
-	defer conn.Close()
 
 	return nil
 }

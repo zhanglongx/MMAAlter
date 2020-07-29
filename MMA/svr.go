@@ -16,15 +16,15 @@ import (
 // CMDPORT is WS cmd port
 const CMDPORT = ":7001"
 
-type cmd struct {
+type svr struct {
 	db *db
 }
 
-func (c *cmd) Open() {
+func (s *svr) Open() {
 	// TODO
 }
 
-func (c *cmd) Listen() {
+func (s *svr) Listen() {
 	ln, err := net.Listen("tcp", CMDPORT)
 	if err != nil {
 		panic(err)
@@ -48,11 +48,11 @@ func (c *cmd) Listen() {
 				for _, b := range strings.Split(string(buffer), "\n") {
 					if strings.Contains(b, "_MMAREQ_") {
 						// TODO
-					} else if strings.Contains(b, "_MMASYNC_") {
+					} else if strings.Contains(b, "_MMASYNC_") || strings.Contains(b, "_MMAEVENT_") {
 
 						re := regexp.MustCompile(`_TABLENAME_:=(.*)_PRIMARYKEYVALUE_:=(.*)_SQL_:=(.*)`)
 						if matched := re.FindSubmatch([]byte(b)); matched != nil {
-							if err := c.db.updateDB(string(matched[1]), string(matched[2]), string(matched[3])); err != nil {
+							if err := s.db.updateDB(string(matched[1]), string(matched[2]), string(matched[3])); err != nil {
 								fmt.Printf("%q\n", err)
 							}
 						}
@@ -61,13 +61,16 @@ func (c *cmd) Listen() {
 
 						re := regexp.MustCompile(`_MMACMD_#_CMD_:=(.*)`)
 						if matched := re.FindSubmatch([]byte(b)); matched != nil {
-							if ack, err := cmdRoutine(matched[1]); err == nil {
-								if _, err := conn.Write(ack); err != nil {
-									panic(err)
-								}
+							var ack string
+							if ack, err = cmdRoutine(string(matched[1])); err != nil {
+								fmt.Printf("%q\n", err)
+							}
+
+							ack = ack + "\r"
+							if _, err := conn.Write([]byte(ack)); err != nil {
+								panic(err)
 							}
 						}
-
 					}
 				}
 			}
@@ -75,17 +78,16 @@ func (c *cmd) Listen() {
 	}
 }
 
-func (c *cmd) Close() {
+func (s *svr) Close() {
 	// TODO
 }
 
-func cmdRoutine(cmd []byte) ([]byte, error) {
-	join := func(s string) []byte {
-		return []byte("_MMAINFO_#_" + s + "_:=d41d8cd98f00b204e9800998ecf8427e\r")
+func cmdRoutine(cmd string) (string, error) {
+	join := func(s string) string {
+		return "_MMAINFO_#_" + s + "_:=d41d8cd98f00b204e9800998ecf8427e"
 	}
 
-	cmdStr := string(cmd)
-	switch cmdStr {
+	switch cmd {
 	case "GETDEVICESTACHECKSUM":
 		return join("DEVSTATUSCHECKSUM"), nil
 	case "GETUSERSTACHECKSUM":
@@ -99,8 +101,8 @@ func cmdRoutine(cmd []byte) ([]byte, error) {
 	case "GETVIRTUALDEVCHECKSUM":
 		return join("VIRTUALDEVCHECKSUM"), nil
 	case "CHECKACTIVE":
-		return []byte("_MMAINFO_#_" + "ACTIVED"), nil
+		return "_MMAINFO_#_" + "ACTIVED", nil
 	}
 
-	return nil, errors.New("Not support cmd")
+	return "", errors.New("Not support cmd")
 }
