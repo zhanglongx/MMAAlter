@@ -30,7 +30,7 @@ type DevicesInfo struct {
 }
 
 var (
-	errIPNotFound = errors.New("IP not found")
+	errIPNotFound = errors.New("Device not available")
 )
 
 // Open a MMA

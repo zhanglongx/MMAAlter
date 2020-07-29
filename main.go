@@ -15,34 +15,37 @@ import (
 
 func main() {
 	m := mma.MMA{
-		DbIP: net.IPv4(11, 11, 11, 105),
+		DbIP: net.IPv4(11, 11, 11, 106),
 	}
 
 	if err := m.Open(); err != nil {
 		panic(err)
 	}
 
-	var devices []mma.DevicesInfo
-	var err error
-
-	if devices, err = m.GetDevices(); err != nil {
-		panic(err)
-	}
-
-	if len(devices) == 0 {
-		fmt.Printf("No devices. Cascaded?\n")
-		return
-	}
+	time.Sleep(time.Duration(20) * time.Second)
 
 	for true {
-		// IP1 := net.IPv4(11, 11, 11, 104)
-		// IP2 := net.IPv4(11, 11, 11, 109)
-		// if err := m.LinkDevices(IP1, IP2); err != nil {
-		// 	fmt.Printf("%q\n", err)
-		// }
+		IP1 := net.IPv4(11, 11, 11, 104)
+		IP2 := net.IPv4(11, 11, 11, 109)
+		if err := m.LinkDevices(IP1, IP2); err != nil {
+			fmt.Printf("%q\n", err)
 
-		time.Sleep(time.Duration(10) * time.Second)
+			time.Sleep(time.Duration(10) * time.Second)
+			continue
+		}
+
+		time.Sleep(time.Duration(100) * time.Second)
+
+		// FIXME:
+		if err := m.DisLinkDevices(IP1, IP2); err != nil {
+			fmt.Printf("%q\n", err)
+
+			time.Sleep(time.Duration(10) * time.Second)
+			continue
+		}
 	}
+
+	time.Sleep(time.Duration(3600) * time.Second)
 
 	m.Close()
 }
