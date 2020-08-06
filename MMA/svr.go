@@ -21,7 +21,7 @@ type svr struct {
 }
 
 func (s *svr) Open() {
-	// TODO
+	go s.Listen()
 }
 
 func (s *svr) Listen() {
@@ -35,7 +35,7 @@ func (s *svr) Listen() {
 	for {
 		conn, err := ln.Accept()
 		if err != nil {
-			panic(err)
+			return
 		}
 
 		go func() {
@@ -68,7 +68,7 @@ func (s *svr) Listen() {
 
 							ack = ack + "\r"
 							if _, err := conn.Write([]byte(ack)); err != nil {
-								panic(err)
+								return
 							}
 						}
 					}

@@ -32,6 +32,9 @@ type device struct {
 
 	// globaldevicestatus.devworksta
 	devworksta int
+
+	// globaldevicestatus.devunitid
+	devunitid string
 }
 
 type link struct {
@@ -39,8 +42,6 @@ type link struct {
 	center net.IP
 
 	lock sync.RWMutex
-
-	unit string
 }
 
 var (
@@ -60,7 +61,7 @@ func (l *link) encStart(d *device, to *device) error {
 		return errDevStaError
 	}
 
-	return l.setLinkSta(d.id, to.ip, to.recvPort, 10)
+	return l.setLinkSta(d.devunitid, d.id, to.ip, to.recvPort, 10)
 }
 
 func (l *link) encStop(d *device) error {
@@ -68,7 +69,7 @@ func (l *link) encStop(d *device) error {
 		return errDevStaError
 	}
 
-	return l.setLinkSta(d.id, "0", 0, 10)
+	return l.setLinkSta(d.devunitid, d.id, "0", 0, 10)
 }
 
 func (l *link) decStart(d *device, from *device) error {
@@ -77,7 +78,7 @@ func (l *link) decStart(d *device, from *device) error {
 		return errDevStaError
 	}
 
-	return l.setLinkSta(d.id, from.ip, from.recvPort, 1)
+	return l.setLinkSta(d.devunitid, d.id, from.ip, from.recvPort, 1)
 
 }
 
@@ -86,10 +87,10 @@ func (l *link) decStop(d *device) error {
 		return errDevStaError
 	}
 
-	return l.setLinkSta(d.id, "0", 0, 1)
+	return l.setLinkSta(d.devunitid, d.id, "0", 0, 1)
 }
 
-func (l *link) setLinkSta(id string, ip string, recvPort int, t int) error {
+func (l *link) setLinkSta(unit string, id string, ip string, recvPort int, t int) error {
 
 	l.lock.Lock()
 
@@ -124,7 +125,7 @@ func (l *link) setLinkSta(id string, ip string, recvPort int, t int) error {
 	}
 
 	cmd = []byte(fmt.Sprintf("_DEVID_:=%s_DEVWORKIP_:=%s_DEVWORKPORT_:=%d_DEVWORKTYPE_:=%d_SETBYUNITID_:=%s\r",
-		id, ip, recvPort, t, l.unit))
+		id, ip, recvPort, t, unit))
 
 	if _, err := conn.Write(cmd); err != nil {
 		return err

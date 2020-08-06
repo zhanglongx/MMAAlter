@@ -56,7 +56,7 @@ func (d *db) close() {
 // getAllDevices select from local database, and return devices
 func (d *db) getAllDevices() ([]device, error) {
 	// Execute the query
-	rows, err := d.sql.Query("SELECT id,ip,devmcport,devworksta FROM " + MMAGlobaldevicestatus)
+	rows, err := d.sql.Query("SELECT id,ip,devmcport,devworksta,devunitid FROM " + MMAGlobaldevicestatus)
 	if err != nil {
 		return nil, err
 	}
@@ -65,7 +65,8 @@ func (d *db) getAllDevices() ([]device, error) {
 	for rows.Next() {
 		dev := device{}
 
-		if err := rows.Scan(&dev.id, &dev.ip, &dev.recvPort, &dev.devworksta); err != nil {
+		if err := rows.Scan(&dev.id, &dev.ip, &dev.recvPort, &dev.devworksta,
+			&dev.devunitid); err != nil {
 			return nil, err
 		}
 

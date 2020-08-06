@@ -52,11 +52,10 @@ func (m *MMA) Open() error {
 		db: db,
 	}
 
-	go wsSvr.Listen()
+	wsSvr.Open()
 
 	m.l = link{
 		center: net.IPv4(11, 11, 11, 105),
-		unit:   "ab65950e_cb21_40e6_9517_2bbd32281ebc",
 	}
 
 	fmt.Printf("Create mma successfully\n")
