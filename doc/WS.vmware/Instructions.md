@@ -6,7 +6,10 @@
 
 安装说明(https://www.tecmint.com/install-vmware-workstation-in-linux/)
 
-2. 增加NAT端口映射
+2. 配置NAT，并增加NAT端口映射
+
+配置/etc/vmware/vmnet8/dhcpd/dhcpd.conf，设置DHCP。
+参考(https://medium.com/shehuawwal/how-to-assign-a-static-ip-address-to-a-vmware-workstation-vm-de7773f9ef19)
 
 在/etc/vmware/vmnet8/nat/nat.conf下增加以下字段，参照(https://docs.vmware.com/en/VMware-Workstation-Pro/12.0/com.vmware.ws.using.doc/GUID-C2EC7B92-A499-4B47-95B6-0BFDDA28AC34.html)
 
