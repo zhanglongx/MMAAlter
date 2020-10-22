@@ -1,0 +1,176 @@
+#!/usr/bin/env bash
+
+### BEGIN INIT INFO
+# Provides: vmwareautostart
+# Required-Start: $vmware $network $syslog
+# Required-Stop: $vmware $network $syslog
+# X-Start-Before:
+# X-Stop-After:
+# Default-Start: 2 3 4 5
+# Default-Stop: 0 1 6
+# Short-Description: This service auto-starts and stops VMware guests
+### END INIT INFO
+
+# To use this script, follow installation instructions at
+# http://www.atrixnet.com/autostart-vmware-virtual-machines-on-boot-in-linux
+# ...and then customize it below
+
+# ======== USER CONFIGURABLE VARIABLES (CUSTOMIZE THESE PLEASE) ==========
+
+# unless you have weird characters or shell escapes in your varable values
+# there is no need to muddy up the shell code by using excessive quotes
+# and punctuation.  For this reason, you'll see the example variable values
+# below are simple and clean.  Don't put spaces between variables, values,
+# and equal signs (=).  You can't do that in shell scripts.
+
+# number of seconds to wait between startup of multiple VMs.  The faster
+# your disk storage, the lower this number can be.  The idea is to not
+# start more VMs at one time than your system can handle and still
+# remain stable/responsive
+
+VM_wait_between=30
+
+# max number of seconds to wait for a virtual machine to gracefully shut
+# down before taking it down hard.  Allow more time for app servers and
+# windows virtual machines.
+
+VM_max_stop_wait=30
+
+# name the system user who runs your virtual machines.  you should not be
+# running virtual machines as root, in the event that one gets compromised
+# that could be a security liability.  I recommend that you consider
+# creating an unprivileged system account that does nothing else but run
+# virtual machines in vmware
+
+VM_user=root
+
+# list your virtual machines below, with each on its own line within the
+# perenthesis block, as shown.  Make sure each VM is a fully-qualified
+# path to the .vmx file for the virtual machine you want to auto-start
+
+VM_list=(
+    "/var/lib/vmware/Shared VMs/Clone of CentOS5.3 - sdm/CentOS5.3.vmx"
+);
+
+# ======== THE REST OF THIS CODE IS NOT CONFIGURABLE ==========
+
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+if [[ $( id -u ) -ne 0 ]];
+then
+   echo You must run this script as root or with sudo
+
+   exit 1
+fi
+if [[ "$( getent passwd $VM_user )" == "" ]];
+then
+   echo Could not locate specified VM user "'$VM_user'" on the system.  Abort.
+
+   exit 1
+fi
+
+VM_user_group=$( id -gn $VM_user );
+
+VM_cmd_exec="sudo -u $VM_user -g $VM_user_group vmrun"
+
+case "$1"
+in
+   start)
+      VM_iter=0
+      VM_list_length=${#VM_list[@]};
+
+      for vm in "${VM_list[@]}";
+      do
+         if [[ $( vmrun list 2>/dev/null | grep "$vm" | wc -l ) -ne 0 ]];
+         then
+            echo VM "$vm" is already running
+
+            continue;
+         fi
+
+         echo Starting up VM "$vm" ...
+
+         $VM_cmd_exec start "$vm" nogui >/dev/null 2>&1
+
+         VM_iter=$(( $VM_iter + 1 ));
+
+         if [[ $VM_iter -lt $VM_list_length ]];
+         then
+            echo -n ...waiting $VM_wait_between seconds before starting next VM
+
+            for tick in $( seq 1 $VM_wait_between );
+            do
+               echo -n .
+
+               sleep 1
+            done
+
+            echo
+         fi
+      done
+
+      $0 status
+   ;;
+
+   stop)
+      for vm in "${VM_list[@]}";
+      do
+
+         if [[ $( vmrun list 2>/dev/null | grep "$vm" | wc -l ) -eq 0 ]];
+         then
+            echo VM "$vm" is not running
+
+            continue;
+         fi
+         echo Stopping "$vm"...
+
+         $VM_cmd_exec stop "$vm" soft >/dev/null 2>&1 &
+
+         VM_stop_pid=$!
+
+         VM_stop_waited=0;
+
+         echo -n ...Waiting $VM_max_stop_wait seconds for it to stop
+
+         while kill -0 $VM_stop_pid >/dev/null 2>&1 ;
+         do
+            echo -n .
+
+            sleep 1
+
+            VM_stop_waited=$(( $VM_stop_waited + 1 ));
+
+            if [[ $VM_stop_waited -gt $VM_max_stop_wait ]];
+            then
+               echo
+               echo -n ...Timeout reached while waiting for graceful shutdown.
+               echo -n Hard shutdown forced...
+
+               $VM_cmd_exec stop "$vm" hard >/dev/null 2>&1;
+            fi
+         done
+
+         echo
+         echo ...VM "$vm" stopped.
+      done
+
+      $0 status
+   ;;
+
+   status)
+      $VM_cmd_exec list
+   ;;
+
+   restart)
+      $0 stop && $0 start
+   ;;
+
+   *)
+      echo Usage: $0 '{start|stop|status|restart}'
+
+      exit 1
+   ;;
+
+esac
+
+# vim: set ft=sh :
