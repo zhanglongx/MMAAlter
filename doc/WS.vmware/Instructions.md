@@ -6,6 +6,8 @@
 
 安装说明(https://www.tecmint.com/install-vmware-workstation-in-linux/)
 
+在CentOS下，出现kernel-headers问题时，需要重新配置grub2(https://www.golinuxcloud.com/set-default-boot-kernel-version-old-previous-rhel-linux)
+
 2. 配置NAT，并增加NAT端口映射
 
 配置/etc/vmware/vmnet8/dhcpd/dhcpd.conf，设置DHCP。
