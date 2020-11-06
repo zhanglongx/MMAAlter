@@ -20,23 +20,6 @@ const (
 	DEVENC   = 10
 )
 
-type device struct {
-	// globaldevicestatus.id
-	id string
-
-	// globaldevicestatus.ip
-	ip string
-
-	// globaldevicestatus.devaudiorecvport
-	recvPort int
-
-	// globaldevicestatus.devworksta
-	devworksta int
-
-	// globaldevicestatus.devunitid
-	devunitid string
-}
-
 type link struct {
 	// centerIP
 	center net.IP
@@ -55,39 +38,39 @@ func (l *link) open() error {
 func (l *link) close() {
 }
 
-func (l *link) encStart(d *device, to *device) error {
+func (l *link) encStart(d *Device, to *Device) error {
 	// TODO: device type
-	if d.devworksta != DEVEMPTY {
+	if d.Devworksta != DEVEMPTY {
 		return errDevStaError
 	}
 
-	return l.setLinkSta(d.devunitid, d.id, to.ip, to.recvPort, 10)
+	return l.setLinkSta(d.Devunitid, d.ID, to.IP, to.RecvPort, 10)
 }
 
-func (l *link) encStop(d *device) error {
-	if d.devworksta != DEVENC {
+func (l *link) encStop(d *Device) error {
+	if d.Devworksta != DEVENC {
 		return errDevStaError
 	}
 
-	return l.setLinkSta(d.devunitid, d.id, "0", 0, 10)
+	return l.setLinkSta(d.Devunitid, d.ID, "0", 0, 10)
 }
 
-func (l *link) decStart(d *device, from *device) error {
+func (l *link) decStart(d *Device, from *Device) error {
 	// TODO: device type
-	if d.devworksta != DEVEMPTY {
+	if d.Devworksta != DEVEMPTY {
 		return errDevStaError
 	}
 
-	return l.setLinkSta(d.devunitid, d.id, from.ip, from.recvPort, 1)
+	return l.setLinkSta(d.Devunitid, d.ID, from.IP, from.RecvPort, 1)
 
 }
 
-func (l *link) decStop(d *device) error {
-	if d.devworksta != DEVDEC {
+func (l *link) decStop(d *Device) error {
+	if d.Devworksta != DEVDEC {
 		return errDevStaError
 	}
 
-	return l.setLinkSta(d.devunitid, d.id, "0", 0, 1)
+	return l.setLinkSta(d.Devunitid, d.ID, "0", 0, 1)
 }
 
 func (l *link) setLinkSta(unit string, id string, ip string, recvPort int, t int) error {

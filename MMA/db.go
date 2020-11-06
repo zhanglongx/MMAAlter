@@ -9,7 +9,6 @@ import (
 	"database/sql"
 	"fmt"
 	"net"
-	"regexp"
 
 	// MySql driver
 	_ "github.com/go-sql-driver/mysql"
@@ -54,19 +53,19 @@ func (d *db) close() {
 }
 
 // getAllDevices select from local database, and return devices
-func (d *db) getAllDevices() ([]device, error) {
+func (d *db) getAllDevices() ([]Device, error) {
 	// Execute the query
 	rows, err := d.sql.Query("SELECT id,ip,devmcport,devworksta,devunitid FROM " + MMAGlobaldevicestatus)
 	if err != nil {
 		return nil, err
 	}
 
-	var devices []device
+	var devices []Device
 	for rows.Next() {
-		dev := device{}
+		dev := Device{}
 
-		if err := rows.Scan(&dev.id, &dev.ip, &dev.recvPort, &dev.devworksta,
-			&dev.devunitid); err != nil {
+		if err := rows.Scan(&dev.ID, &dev.IP, &dev.RecvPort, &dev.Devworksta,
+			&dev.Devunitid); err != nil {
 			return nil, err
 		}
 
@@ -82,30 +81,6 @@ func (d *db) getAllDevices() ([]device, error) {
 func (d *db) updateDB(table string, key string, sql string) error {
 	if table != "globaldevicestatus" {
 		return nil
-	}
-
-	query := fmt.Sprintf("SELECT * from %s WHERE id = '%s'", table, key)
-	rows, err := d.sql.Query(query)
-	if err != nil {
-		return err
-	}
-
-	if !rows.Next() {
-		query := fmt.Sprintf("INSERT INTO %s(id) VALUES('%s')", table, key)
-		if _, execErr := d.sql.Exec(query); execErr != nil {
-			return execErr
-		}
-	}
-
-	// fmt.Printf(sql + "\n")
-
-	re := regexp.MustCompile("and serverip=.*$")
-	sql = re.ReplaceAllString(sql, "")
-
-	// FIXME: transaction?
-	_, execErr := d.sql.Exec(sql + ";")
-	if execErr != nil {
-		return execErr
 	}
 
 	return nil

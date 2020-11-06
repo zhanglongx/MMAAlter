@@ -11,13 +11,15 @@ import (
 	"net"
 	"regexp"
 	"strings"
+	"time"
 )
 
 // CMDPORT is WS cmd port
 const CMDPORT = ":7001"
 
 type svr struct {
-	db *db
+	db        *db
+	enumerate func(devices []Device)
 }
 
 func (s *svr) Open() {
@@ -39,10 +41,12 @@ func (s *svr) Listen() {
 		}
 
 		go func() {
+			isEnumerate := false
+
 			for true {
 				buffer := make([]byte, 512*1024)
 				if _, err := conn.Read(buffer); err != nil {
-					return
+					break
 				}
 
 				for _, b := range strings.Split(string(buffer), "\n") {
@@ -57,6 +61,7 @@ func (s *svr) Listen() {
 							}
 						}
 
+						isEnumerate = true
 					} else if strings.Contains(b, "_MMACMD_") {
 
 						re := regexp.MustCompile(`_MMACMD_#_CMD_:=(.*)`)
@@ -73,6 +78,10 @@ func (s *svr) Listen() {
 						}
 					}
 				}
+			}
+
+			if isEnumerate {
+				go s.delayedEnumerate()
 			}
 		}()
 	}
@@ -105,4 +114,16 @@ func cmdRoutine(cmd string) (string, error) {
 	}
 
 	return "", errors.New("Not support cmd")
+}
+
+func (s *svr) delayedEnumerate() {
+	// XXX: delayed 30 sec to read DB, to Ensure DB is updated
+	time.Sleep(time.Duration(30) * time.Second)
+
+	// TODO: delayed Enumerate
+	if devs, err := s.db.getAllDevices(); err != nil {
+		fmt.Printf("%v\n", err)
+	} else {
+		s.enumerate(devs)
+	}
 }

@@ -11,22 +11,40 @@ import (
 	"net"
 )
 
+// Device is the main struct for table GlobalDeviceStatus row
+type Device struct {
+	// globaldevicestatus.id
+	ID string
+
+	// globaldevicestatus.ip
+	IP string
+
+	// globaldevicestatus.devaudiorecvport
+	RecvPort int
+
+	// globaldevicestatus.devworksta
+	Devworksta int
+
+	// globaldevicestatus.devunitid
+	Devunitid string
+
+	// globaldevicestatus.devvideosendip
+	Devvideosendip string
+}
+
 // MMA is main struct
 type MMA struct {
 	// DbIP is local MMA IP
 	DbIP net.IP
+
+	// Callback
+	Enumerate func(devices []Device)
 
 	// mma.db
 	db *db
 
 	// mma.SetLinkSta
 	l link
-}
-
-// DevicesInfo is the device info
-type DevicesInfo struct {
-	// DeviceIP
-	DeviceIP net.IP
 }
 
 var (
@@ -39,7 +57,7 @@ func (m *MMA) Open() error {
 	db := &db{
 		ip:       m.DbIP,
 		user:     "root",
-		password: "wisdom",
+		password: "123",
 	}
 
 	if err := db.open(); err != nil {
@@ -49,37 +67,19 @@ func (m *MMA) Open() error {
 	m.db = db
 
 	wsSvr := svr{
-		db: db,
+		db:        db,
+		enumerate: m.Enumerate,
 	}
 
 	wsSvr.Open()
 
 	m.l = link{
-		center: net.IPv4(11, 11, 11, 105),
+		center: net.IPv4(192, 168, 64, 135),
 	}
 
 	fmt.Printf("Create mma successfully\n")
 
 	return nil
-}
-
-// GetDevices return DevicesInfo
-func (m *MMA) GetDevices() ([]DevicesInfo, error) {
-	devices, err := m.db.getAllDevices()
-	if err != nil {
-		return nil, err
-	}
-
-	var Infos []DevicesInfo
-	for _, d := range devices {
-		Infos = append(Infos, DevicesInfo{
-			DeviceIP: net.ParseIP(d.ip),
-		})
-
-		fmt.Printf("Get DevIP: %s\n", d.ip)
-	}
-
-	return Infos, nil
 }
 
 // LinkDevices Link IP1 -> IP2
@@ -89,18 +89,18 @@ func (m *MMA) LinkDevices(IP1 net.IP, IP2 net.IP) error {
 		return err
 	}
 
-	var dev1, dev2 device
+	var dev1, dev2 Device
 	for _, dev := range devices {
-		if IP1.Equal(net.ParseIP(dev.ip)) && dev.devworksta == DEVEMPTY {
+		if IP1.Equal(net.ParseIP(dev.IP)) && dev.Devworksta == DEVEMPTY {
 			dev1 = dev
 		}
 
-		if IP2.Equal(net.ParseIP(dev.ip)) && dev.devworksta == DEVEMPTY {
+		if IP2.Equal(net.ParseIP(dev.IP)) && dev.Devworksta == DEVEMPTY {
 			dev2 = dev
 		}
 	}
 
-	if dev1.id == "" || dev2.id == "" {
+	if dev1.ID == "" || dev2.ID == "" {
 		return errIPNotFound
 	}
 
@@ -124,18 +124,18 @@ func (m *MMA) DisLinkDevices(IP1 net.IP, IP2 net.IP) error {
 		return err
 	}
 
-	var dev1, dev2 device
+	var dev1, dev2 Device
 	for _, dev := range devices {
-		if IP1.Equal(net.ParseIP(dev.ip)) && dev.devworksta == DEVENC {
+		if IP1.Equal(net.ParseIP(dev.IP)) && dev.Devworksta == DEVENC {
 			dev1 = dev
 		}
 
-		if IP2.Equal(net.ParseIP(dev.ip)) && dev.devworksta == DEVDEC {
+		if IP2.Equal(net.ParseIP(dev.IP)) && dev.Devworksta == DEVDEC {
 			dev2 = dev
 		}
 	}
 
-	if dev1.id == "" || dev2.id == "" {
+	if dev1.ID == "" || dev2.ID == "" {
 		return errIPNotFound
 	}
 
