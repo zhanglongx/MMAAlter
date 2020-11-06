@@ -120,7 +120,6 @@ func (s *svr) delayedEnumerate() {
 	// XXX: delayed 30 sec to read DB, to Ensure DB is updated
 	time.Sleep(time.Duration(30) * time.Second)
 
-	// TODO: delayed Enumerate
 	if devs, err := s.db.getAllDevices(); err != nil {
 		fmt.Printf("%v\n", err)
 	} else {
